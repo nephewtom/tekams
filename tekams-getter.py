@@ -1,9 +1,7 @@
 import re
 import sys
-import pycurl
 import sqlite3
 import argparse
-from io import BytesIO
 from datetime import datetime
 
 import requests
@@ -45,7 +43,6 @@ class CompanyDatabase:
 
 
 class Getter:
-
     def __init__(self, base_url):
         self.base_url = base_url
         self.all_records = []
@@ -59,7 +56,7 @@ class Getter:
                            'https': 'socks5://127.0.0.1:9050'}
         return session
 
-    def renew_connection(self):
+    def renew_tor_session(self):
         with Controller.from_port(port=9051) as controller:
             controller.authenticate(password="password")
             controller.signal(Signal.NEWNYM)
@@ -71,21 +68,7 @@ class Getter:
         response = self.session.get(url)
         return response.text
 
-    def __get_pycurl(self, url):
-        buffer = BytesIO()
-        c = pycurl.Curl()
-        c.setopt(c.CUSTOMREQUEST, 'GET')
-        c.setopt(c.URL, url)
-        c.setopt(c.WRITEDATA, buffer)
-        # c.setopt(c.VERBOSE, True)
-        c.perform()
-        c.close()
-        html = buffer.getvalue()
-        decoded = html.decode('iso-8859-1')
-        return decoded
-
     def getHtml(self, url):
-        #return self.__get_pycurl(url)
         return self.__get_requests(url)
 
     def fillPhones(self, records):
@@ -103,7 +86,7 @@ class Getter:
                     break
 
                 tries -= 1
-                self.renew_connection()
+                self.renew_tor_session()
 
             self.db.insert(record, url)
             # print('ranking:', record.ranking)
@@ -121,7 +104,7 @@ class Getter:
             if res != -1:
                 print("CAPADO!")
                 tries -= 1
-                self.renew_connection()
+                self.renew_tor_session()
             else:
                 break
 
