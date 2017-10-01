@@ -104,11 +104,16 @@ class Getter:
         self.get_company()
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("url", help="url")
-args = parser.parse_args()
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("url", help="url")
+    args = parser.parse_args()
 
-print("url:", args.url)
+    print("url:", args.url)
 
-getter = Getter(args.url)
-getter.run()
+    getter = Getter(args.url)
+    getter.run()
+
+
+if __name__ == "__main__":
+    main()
