@@ -1,0 +1,1 @@
+select company.uid, ranking, phone, name, url from company inner join conns on conns.uid = company.uid where conns.uid in (select uid from conns where url in (select url from conns group by url having count(*) > 1));
