@@ -1,5 +1,6 @@
 import re
 import sys
+import uuid
 import sqlite3
 import argparse
 from datetime import datetime
@@ -29,71 +30,94 @@ class Record:
               .format('-'*5, '-'*6, '-'*60, '-'*30, '-'*15, '-'*9))
 
 
-class CompanyDatabase:
+class Database:
     def __init__(self, db_name):
         self.connection = sqlite3.connect("{}.db".format(db_name))
         self.cursor = self.connection.cursor()
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS company \
-        (id datetime, page integer, ranking integer, name text, \
-        address text, city text, province text, phone text, cnae text, \
-        billing text, employees text, url text)")
 
-    def __insert(self, page, ranking, name, address, city, province,
-                 phone, cnae, billing, employees, url):
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS company \
+        (uid text, page integer, ranking integer, name text, address text, \
+        city text, province text, phone text, cnae text, \
+        billing text, employees text, renew integer)")
+
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS captcha \
+        (uid text, page integer, success integer, datetime datetime)")
+
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS conns \
+        (uid text, ip text, url text, datetime datetime)")
+
+    def __insert(self, uid, page, ranking, name, address, city, province,
+                 phone, cnae, billing, employees, renew):
         self.cursor.execute(
-            "INSERT INTO company(id, page, ranking, name, address, city, \
-            province, phone, cnae, billing, employees, url) "
+            "INSERT INTO company(uid, page, ranking, name, address, city, \
+            province, phone, cnae, billing, employees, renew) "
             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
-            [datetime.now(), page, ranking, name, address, city, province,
-             phone, cnae, billing, employees, url])
+            [uid, page, ranking, name, address, city,
+             province, phone, cnae, billing, employees, renew])
         self.connection.commit()
 
-    def insert(self, r, url):
-        self.__insert(r.page, r.ranking, r.name, r.address, r.city, r.province,
-                      r.phone, r.cnae, r.billing, r.employees, url)
+    def insert(self, uid, record, renew):
+        renew_int = 1 if renew else 0
+        self.__insert(uid, record.page, record.ranking, record.name,
+                      record.address, record.city, record.province,
+                      record.phone, record.cnae, record.billing,
+                      record.employees, renew_int)
+
+    def captcha(self, uid, page, success):
+        success_int = 1 if success else 0
+        self.cursor.execute(
+            "INSERT INTO captcha(uid, page, success, datetime) \
+            VALUES(?,?,?,?)", [uid, page, success_int, datetime.now()])
+        self.connection.commit()
+
+    def conns(self, uid, ip, url):
+        self.cursor.execute(
+            "INSERT INTO conns(uid, ip, url, datetime) \
+            VALUES(?,?,?,?)", [uid, ip, url, datetime.now()])
+        self.connection.commit()
 
 
 class CompanyParser:
     def __init__(self, html):
         self.html = html
 
-    def regex(self, exp):
+    def __regex(self, exp):
         match = re.search(exp, self.html)
         value = match.group(1) if match else 'none'
         return value
 
-    def get_business_name(self):
-        return self.regex('>Información de (.*) \| Guía Empresas</title><script>')
+    def __get_business_name(self):
+        return self.__regex('>Información de (.*) \| Guía Empresas</title><script>')
 
-    def get_address(self):
-        return self.regex('situation_calle">(.*)</span><li><strong>Localidad: ')
+    def __get_address(self):
+        return self.__regex('situation_calle">(.*)</span><li><strong>Localidad: ')
 
-    def get_city(self):
-        return self.regex('situation_loc">(.*)</span><li><strong>Provincia: ')
+    def __get_city(self):
+        return self.__regex('situation_loc">(.*)</span><li><strong>Provincia: ')
 
-    def get_phone(self):
-        return self.regex('eacute;fono: </strong>(.*)<div')
+    def __get_phone(self):
+        return self.__regex('eacute;fono: </strong>(.*)<div')
 
-    def get_cnae(self):
-        return self.regex('<strong>CNAE: </strong>(.*)<li><strong>Objeto Social: ')
+    def __get_cnae(self):
+        return self.__regex('<strong>CNAE: </strong>(.*)<li><strong>Objeto Social: ')
 
-    def get_billing(self):
-        return self.regex('registrada: </strong>(.*)</p>')
+    def __get_billing(self):
+        return self.__regex('registrada: </strong>(.*)</p>')
 
-    def get_employees(self):
-        return self.regex('registrado: </strong>(.*)</p>')
+    def __get_employees(self):
+        return self.__regex('registrado: </strong>(.*)</p>')
 
     def fill_record(self, r):
-        r.name = self.get_business_name()
-        r.address = self.get_address()
-        r.city = self.get_city()
-        r.phone = self.get_phone()
-        r.cnae = self.get_cnae()
-        r.billing = self.get_billing()
-        r.employees = self.get_employees()
+        r.name = self.__get_business_name()
+        r.address = self.__get_address()
+        r.city = self.__get_city()
+        r.phone = self.__get_phone()
+        r.cnae = self.__get_cnae()
+        r.billing = self.__get_billing()
+        r.employees = self.__get_employees()
 
 
-class PageParser():
+class PageParser:
     def __init__(self, page):
         self.page = page
 
@@ -114,11 +138,9 @@ class PageParser():
         return records
 
 
-class Getter:
-    def __init__(self, base_url):
-        self.base_url = base_url
-        self.all_records = []
-        self.db = CompanyDatabase('tekams')
+class Connector:
+    def __init__(self, db):
+        self.db = db
         self.session = self.__get_tor_session()
         self.ip = self.__get_ip()
 
@@ -139,51 +161,67 @@ class Getter:
         ip = self.session.get("http://icanhazip.com").text.rstrip()
         return ip
 
-    def __renew_ip(self, msg):
+    def renew_ip(self, msg):
         ip = self.ip
-        print("Renewing ip:", ip, msg)
+        # print("Renewing ip:", ip, msg)
         while ip == self.ip:
             self.__renew_tor_session()
             ip = self.__get_ip()
-
-        print("Renewed ip:", ip)
+        # print("Renewed ip:", ip)
         self.ip = ip
 
     def get_html(self, url):
         response = self.session.get(url)
-        return response.text
+        uid = uuid.uuid4().hex
+        self.db.conns(uid, self.ip, url)
+        return response.text, uid
 
-    def fill_record(self, url, record):
-        html = self.get_html(url)
+
+class Getter:
+    def __init__(self, base_url):
+        self.base_url = base_url
+        self.db = Database('tekams')
+        self.conn = Connector(self.db)
+        self.all_records = []
+
+    def __fill_record(self, url, record):
+        html, uid = self.conn.get_html(url)
         parser = CompanyParser(html)
-        record = parser.fill_record(record)
+        parser.fill_record(record)
+        return uid
 
-    def fill_company_info(self, record):
+    def __fill_company_info(self, record):
+        renew = False
         url = self.base_url + record.name + ".html"
-        self.fill_record(url, record)
+        uid = self.__fill_record(url, record)
         if record.phone == 'none':
-            self.__renew_ip("for company")
-            self.fill_record(url, record)
+            self.conn.renew_ip("for company")
+            uid = self.__fill_record(url, record)
+            renew = True
 
         record.display()
-        self.db.insert(record, url)
+        self.db.insert(uid, record, renew)
 
-    def anti_captcha(self, url):
-        html = self.get_html(url)
+    def __check_captcha(self, url):
+        html, uid = self.conn.get_html(url)
         res = html.find("ERROR_CAPADO_ROBOTS")
-        captcha = res != -1
-        if captcha:
-            self.__renew_ip("for page")
-            html = self.get_html(url)
+        captcha = (res != -1)
+        return captcha, html, uid
 
+    def __anti_captcha(self, url, page):
+        captcha, html, uid = self.__check_captcha(url)
+        if captcha:
+            self.conn.renew_ip("for page")
+            captcha, html, uid = self.__check_captcha(url)
+            self.db.captcha(uid, page, not captcha)
         return html
 
-    def get_companies(self, url, page):
-        html = self.anti_captcha(url)
+    def __get_companies(self, url, page):
+        html = self.__anti_captcha(url, page)
         parser = PageParser(page)
         records = parser.get_records(html)
         for record in records:
-            self.fill_company_info(record)
+            self.__fill_company_info(record)
 
         self.all_records.extend(records)
 
@@ -192,8 +230,7 @@ class Getter:
             url = self.base_url + 'provincia/MURCIA/?qPagina=' + str(page)
             print("\n===== Extracting page", page, "=====  URL:", url, "\n")
             Record.display_header()
-            self.get_companies(url, page)
-
+            self.__get_companies(url, page)
         print("\n", '='*30, "FIN", '='*30)
 
 
