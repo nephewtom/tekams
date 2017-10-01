@@ -86,26 +86,42 @@ class CompanyParser:
         value = match.group(1) if match else 'none'
         return value
 
+    def __special_chars(self, s):
+        s = s.replace('&euro;', '€')
+        s = s.replace('&aacute;', 'á')
+        s = s.replace('&eacute;', 'é')
+        s = s.replace('&iacute;', 'í')
+        s = s.replace('&oacute;', 'ó')
+        s = s.replace('&uacute;', 'ú')
+        return s
+
     def __get_business_name(self):
-        return self.__regex('>Información de (.*) \| Guía Empresas</title><script>')
+        x = self.__regex('>Información de (.*) \| Guía Empresas</title><script>')
+        return self.__special_chars(x)
 
     def __get_address(self):
-        return self.__regex('situation_calle">(.*)</span><li><strong>Localidad: ')
+        x = self.__regex('situation_calle">(.*)</span><li><strong>Localidad: ')
+        return self.__special_chars(x)
 
     def __get_city(self):
-        return self.__regex('situation_loc">(.*)</span><li><strong>Provincia: ')
+        x = self.__regex('situation_loc">(.*)</span><li><strong>Provincia: ')
+        return self.__special_chars(x)
 
     def __get_phone(self):
-        return self.__regex('eacute;fono: </strong>(.*)<div')
+        x = self.__regex('eacute;fono: </strong>(.*)<div')
+        return self.__special_chars(x)
 
     def __get_cnae(self):
-        return self.__regex('<strong>CNAE: </strong>(.*)<li><strong>Objeto Social: ')
+        x = self.__regex('<strong>CNAE: </strong>(.*)<li><strong>Objeto Social: ')
+        return self.__special_chars(x)
 
     def __get_billing(self):
-        return self.__regex('registrada: </strong>(.*)</p>')
+        x = self.__regex('registrada: </strong>(.*)</p>')
+        return self.__special_chars(x)
 
     def __get_employees(self):
-        return self.__regex('registrado: </strong>(.*)</p>')
+        x = self.__regex('registrado: </strong>(.*)</p>')
+        return self.__special_chars(x)
 
     def fill_record(self, r):
         r.name = self.__get_business_name()
