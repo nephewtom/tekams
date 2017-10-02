@@ -1,9 +1,15 @@
 class Record:
     def __init__(self, page, ranking, name, province):
         self.page = page
-        self.name = name.group(1)[1:]
         self.ranking = ranking.group(1).replace(".", "")
+        self.name = name.group(1)[1:]
         self.province = province.group(1)
+        self.address = ''
+        self.city = ''
+        self.phone = ''
+        self.cnae = ''
+        self.billing = ''
+        self.employees = ''
 
     def display(self):
         print('{:5d} | {:6d} | {:60s} | {:30s} | {:15s} | {:9s}'
