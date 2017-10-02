@@ -8,12 +8,12 @@ from page_getter import Getter
 
 db = Database('tekams')
 base_url = 'http://guiaempresas.universia.es/'
-getter = Getter(db, base_url)
 
 
 def parallel(page):
     # start_time = datetime.now()
     print("pid:", os.getpid(), "start:", page[0], "end:", page[1])
+    getter = Getter(db, base_url)
     getter.pages(page[0], page[1])
     # end_time = datetime.now()
     # execution_time = end_time.timestamp() - start_time.timestamp()
@@ -21,7 +21,7 @@ def parallel(page):
 
 
 def foo(x):
-    return x, x
+    return 410*(x-1)+1, x*410
 
 
 def run():
@@ -29,6 +29,7 @@ def run():
     for i in list(range(1, 11)):
         pairs.append(foo(i))
     print(pairs)
+
     start_time = datetime.now()
     with mp.Pool(10) as pool:
         print("with mp.Pool(10)")
