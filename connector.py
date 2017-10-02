@@ -5,8 +5,7 @@ from stem.control import Controller
 
 
 class Connector:
-    def __init__(self, db):
-        self.db = db
+    def __init__(self):
         self.session = self.__get_tor_session()
         self.ip = self.__get_ip()
 
@@ -27,17 +26,29 @@ class Connector:
         ip = self.session.get("http://icanhazip.com").text.rstrip()
         return ip
 
-    def renew_ip(self, msg):
+    def print_ip(self):
+        print("[ ip:", self.ip, "]")
+
+    def renew_ip(self):
         ip = self.ip
-        # print("Renewing ip:", ip, msg)
         while ip == self.ip:
             self.__renew_tor_session()
             ip = self.__get_ip()
-        # print("Renewed ip:", ip)
         self.ip = ip
 
     def get_html(self, url):
         response = self.session.get(url)
+        return response.text
+
+
+class ConnectorDb(Connector):
+    def __init__(self, db):
+        super().__init__()
+        self.db = db
+
+    def get_html(self, url, is_company):
+        query = 'comp' if is_company else 'page'
+        response = self.session.get(url)
         uid = uuid.uuid4().hex
-        self.db.conns(uid, self.ip, url)
+        self.db.conns(uid, query, self.ip, url)
         return response.text, uid
