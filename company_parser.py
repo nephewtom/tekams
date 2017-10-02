@@ -4,6 +4,13 @@ import re
 class CompanyParser:
     def __init__(self, html):
         self.html = html
+        self.name = self.__get_business_name()
+        self.address = self.__get_address()
+        self.city = self.__get_city()
+        self.phone = self.__get_phone()
+        self.cnae = self.__get_cnae()
+        self.billing = self.__get_billing()
+        self.employees = self.__get_employees()
 
     def __regex(self, exp):
         match = re.search(exp, self.html)
@@ -47,11 +54,20 @@ class CompanyParser:
         x = self.__regex('registrado: </strong>(.*)</p>')
         return self.__special_chars(x)
 
-    def fill_record(self, r):
-        r.name = self.__get_business_name()
-        r.address = self.__get_address()
-        r.city = self.__get_city()
-        r.phone = self.__get_phone()
-        r.cnae = self.__get_cnae()
-        r.billing = self.__get_billing()
-        r.employees = self.__get_employees()
+    def fill(self, record):
+        record.name = self.name
+        record.address = self.address
+        record.city = self.city
+        record.phone = self.phone
+        record.cnae = self.cnae
+        record.billing = self.billing
+        record.employees = self.employees
+
+    def print_info(self):
+        print("name:", self.name)
+        print("address:", self.address)
+        print("city:", self.city)
+        print("phone:", self.phone)
+        print("cnae:", self.cnae)
+        print("billing:", self.billing)
+        print("employees:", self.employees)
