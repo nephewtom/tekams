@@ -16,7 +16,7 @@ class Database:
         (uid text, page integer, success integer, datetime datetime)")
 
         self.cursor.execute("CREATE TABLE IF NOT EXISTS conns \
-        (uid text, ip text, url text, datetime datetime)")
+        (uid text, query text, ip text, url text, datetime datetime)")
 
     def __insert(self, uid, page, ranking, name, address, city, province,
                  phone, cnae, billing, employees, renew):
@@ -42,8 +42,8 @@ class Database:
             VALUES(?,?,?,?)", [uid, page, success_int, datetime.now()])
         self.connection.commit()
 
-    def conns(self, uid, ip, url):
+    def conns(self, uid, query, ip, url):
         self.cursor.execute(
-            "INSERT INTO conns(uid, ip, url, datetime) \
-            VALUES(?,?,?,?)", [uid, ip, url, datetime.now()])
+            "INSERT INTO conns(uid, query, ip, url, datetime) \
+            VALUES(?,?,?,?,?)", [uid, query, ip, url, datetime.now()])
         self.connection.commit()
