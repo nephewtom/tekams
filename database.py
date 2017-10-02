@@ -9,7 +9,7 @@ class Database:
         self.connection.execute("CREATE TABLE IF NOT EXISTS company \
         (uid text, page integer, ranking integer, name text, address text, \
         city text, province text, phone text, cnae text, \
-        billing text, employees text, renew integer)")
+        billing text, employees text, status text)")
 
         self.connection.execute("CREATE TABLE IF NOT EXISTS captcha \
         (uid text, page integer, success integer, datetime datetime)")
@@ -24,21 +24,20 @@ class Database:
         self.cursor = self.connection.cursor()
 
     def __insert(self, uid, page, ranking, name, address, city, province,
-                 phone, cnae, billing, employees, renew):
+                 phone, cnae, billing, employees, status):
         self.cursor.execute(
             "INSERT INTO company(uid, page, ranking, name, address, city, \
-            province, phone, cnae, billing, employees, renew) "
+            province, phone, cnae, billing, employees, status) "
             "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
             [uid, page, ranking, name, address, city,
-             province, phone, cnae, billing, employees, renew])
+             province, phone, cnae, billing, employees, status])
         self.connection.commit()
 
-    def insert(self, uid, record, renew):
-        renew_int = 1 if renew else 0
+    def insert(self, uid, record, status):
         self.__insert(uid, record.page, record.ranking, record.name,
                       record.address, record.city, record.province,
                       record.phone, record.cnae, record.billing,
-                      record.employees, renew_int)
+                      record.employees, status)
 
     def captcha(self, uid, page, success):
         success_int = 1 if success else 0

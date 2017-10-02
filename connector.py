@@ -46,8 +46,7 @@ class ConnectorDb(Connector):
         super().__init__()
         self.db = db
 
-    def get_html(self, url, is_company):
-        query = 'comp' if is_company else 'page'
+    def get_html(self, url, query):
         response = self.session.get(url)
         uid = uuid.uuid4().hex
         self.db.conns(uid, query, self.ip, url)
