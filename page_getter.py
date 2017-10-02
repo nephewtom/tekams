@@ -13,37 +13,47 @@ class Getter:
         self.db = db
         self.conn = ConnectorDb(db)
         self.base_url = url
-        self.all_records = []
 
-    def __fill_record(self, url, record):
-        html, uid = self.conn.get_html(url, True)
+    def __fill_record(self, url, record, query):
+        html, uid = self.conn.get_html(url, query)
         parser = CompanyParser(html)
         parser.fill(record)
         return uid
 
     def __fill_company_info(self, record):
-        renew = False
+        status = 'first'
         url = self.base_url + record.name + ".html"
-        uid = self.__fill_record(url, record)
-        if record.phone == 'none':
-            self.conn.renew_ip()
-            uid = self.__fill_record(url, record)
-            renew = True
+        uid = self.__fill_record(url, record, status)
 
-        record.display()
-        self.db.insert(uid, record, renew)
+        if record.phone == 'none' and record.name != 'none':
+            self.conn.renew_ip()
+            status = 'renew-phone'
+            uid = self.__fill_record(url, record, status)
+
+        tries = 1
+        while record.name == 'none' and tries < 6:
+            self.conn.renew_ip()
+            status = 'renew-name' + str(tries)
+            uid = self.__fill_record(url, record, status)
+            tries += 1
+
+        self.db.insert(uid, record, status)
 
     def __check_captcha(self, url):
-        html, uid = self.conn.get_html(url, False)
+        html, uid = self.conn.get_html(url, 'page')
         res = html.find("ERROR_CAPADO_ROBOTS")
         captcha = (res != -1)
         return captcha, html, uid
 
     def __anti_captcha(self, url, page):
         captcha, html, uid = self.__check_captcha(url)
-        if captcha:
+        tries = 5
+        while captcha and tries > 0:
             self.conn.renew_ip()
             captcha, html, uid = self.__check_captcha(url)
+            tries -= 1
+
+        if captcha:  # Save page to try manually
             self.db.captcha(uid, page, not captcha)
         return html
 
@@ -52,9 +62,11 @@ class Getter:
         parser = PageParser(page)
         records = parser.get_records(html)
         for record in records:
-            self.__fill_company_info(record)
-
-        self.all_records.extend(records)
+            try:
+                self.__fill_company_info(record)
+                record.display()
+            except:
+                self.db.insert('666', record, 'FAILED')
 
     def pages(self, start, end):
         for page in range(start, end+1):
