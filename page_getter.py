@@ -9,10 +9,10 @@ from company_parser import CompanyParser
 
 
 class Getter:
-    def __init__(self, base_url):
-        self.base_url = base_url
-        self.db = Database('tekams')
-        self.conn = ConnectorDb(self.db)
+    def __init__(self, db, url):
+        self.db = db
+        self.conn = ConnectorDb(db)
+        self.base_url = url
         self.all_records = []
 
     def __fill_record(self, url, record):
@@ -56,7 +56,7 @@ class Getter:
 
         self.all_records.extend(records)
 
-    def get_pages(self, start, end):
+    def pages(self, start, end):
         for page in range(start, end+1):
             url = self.base_url + 'provincia/MURCIA/?qPagina=' + str(page)
             print("\n===== Extracting page", page, "=====  URL:", url, "\n")
@@ -75,8 +75,10 @@ def main():
               "] MUST be lower or equal than end-page [", args.end, "]")
         sys.exit()
 
-    mur = Getter('http://guiaempresas.universia.es/')
-    mur.get_pages(args.start, args.end)  # From 1 - 4104 for Murcia
+    url = 'http://guiaempresas.universia.es/'
+    db = Database('tekams')
+    getter = Getter(db, url)
+    getter.pages(args.start, args.end)  # From 1 - 4104 for Murcia
 
 
 if __name__ == "__main__":

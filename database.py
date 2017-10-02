@@ -5,18 +5,23 @@ from datetime import datetime
 class Database:
     def __init__(self, db_name):
         self.connection = sqlite3.connect("{}.db".format(db_name))
-        self.cursor = self.connection.cursor()
 
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS company \
+        self.connection.execute("CREATE TABLE IF NOT EXISTS company \
         (uid text, page integer, ranking integer, name text, address text, \
         city text, province text, phone text, cnae text, \
         billing text, employees text, renew integer)")
 
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS captcha \
+        self.connection.execute("CREATE TABLE IF NOT EXISTS captcha \
         (uid text, page integer, success integer, datetime datetime)")
 
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS conns \
+        self.connection.execute("CREATE TABLE IF NOT EXISTS conns \
         (uid text, query text, ip text, url text, datetime datetime)")
+
+#        self.cursor.execute("CREATE TABLE IF NOT EXISTS parallel \
+#        (start_page integer, end_page integer, execution_time)")
+
+        self.connection.commit()
+        self.cursor = self.connection.cursor()
 
     def __insert(self, uid, page, ranking, name, address, city, province,
                  phone, cnae, billing, employees, renew):
