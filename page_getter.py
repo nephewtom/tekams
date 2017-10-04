@@ -1,5 +1,6 @@
 import sys
 import argparse
+import uuid
 
 from record import Record
 from database import Database
@@ -14,43 +15,49 @@ class Getter:
         self.conn = ConnectorDb(db)
         self.base_url = url
 
-    def __fill_record(self, url, record, query):
-        html, uid = self.conn.get_html(url, query)
+    def __fill_record(self, url, record, query, uid):
+        html = self.conn.get_html(url, query, uid)
         parser = CompanyParser(html)
         parser.fill(record)
-        return uid
 
     def __fill_company_info(self, record):
+        uid = uuid.uuid4().hex
         status = 'first'
         url = self.base_url + record.name + ".html"
-        uid = self.__fill_record(url, record, status)
+        self.__fill_record(url, record, status, uid)
 
-        if record.phone == 'none' and record.name != 'none':
-            self.conn.renew_ip()
-            status = 'renew-phone'
-            uid = self.__fill_record(url, record, status)
+        # Creo que el siguient if no aporta nada, de acuerdo con estos resultados:
+        # sqlite> select count(*) from company where status = 'renew-phone' and phone = 'none';
+        # 1378
+        # sqlite> select count(*) from company where status = 'renew-phone';
+        # 1378
+        # if record.phone == 'none' and record.name != 'none':
+        #     self.conn.renew_ip()
+        #     status = 'renew-phone'
+        #     self.__fill_record(url, record, status, uid)
 
         tries = 1
-        while record.name == 'none' and tries < 6:
+        while record.name == 'none' and tries < 11:
             self.conn.renew_ip()
             status = 'renew-name' + str(tries)
-            uid = self.__fill_record(url, record, status)
+            self.__fill_record(url, record, status, uid)
             tries += 1
 
         self.db.insert(uid, record, status)
 
-    def __check_captcha(self, url):
-        html, uid = self.conn.get_html(url, 'page')
+    def __check_captcha(self, url, uid):
+        html = self.conn.get_html(url, 'page', uid)
         res = html.find("ERROR_CAPADO_ROBOTS")
         captcha = (res != -1)
-        return captcha, html, uid
+        return captcha, html
 
     def __anti_captcha(self, url, page):
-        captcha, html, uid = self.__check_captcha(url)
+        uid = uuid.uuid4().hex
+        captcha, html = self.__check_captcha(url, uid)
         tries = 5
         while captcha and tries > 0:
             self.conn.renew_ip()
-            captcha, html, uid = self.__check_captcha(url)
+            captcha, html = self.__check_captcha(url, uid)
             tries -= 1
 
         if captcha:  # Save page to try manually
@@ -66,6 +73,9 @@ class Getter:
                 self.__fill_company_info(record)
                 record.display()
             except:
+                print("EXCEPTION fill_company_info BEGIN")
+                record.display()
+                print("EXCEPTION fill_company_info END")
                 self.db.insert('666', record, 'FAILED')
 
     def pages(self, start, end):

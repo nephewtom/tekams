@@ -1,4 +1,3 @@
-import uuid
 import requests
 from stem import Signal
 from stem.control import Controller
@@ -46,8 +45,7 @@ class ConnectorDb(Connector):
         super().__init__()
         self.db = db
 
-    def get_html(self, url, query):
+    def get_html(self, url, query, uid):
         response = self.session.get(url)
-        uid = uuid.uuid4().hex
         self.db.conns(uid, query, self.ip, url)
-        return response.text, uid
+        return response.text
