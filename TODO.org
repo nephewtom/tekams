@@ -1,0 +1,93 @@
+* Más fácil sin tener que retocar todo.
+  Saco la lista de pares (start, end) que lancé con parallel
+#+BEGIN_EXAMPLE 
+(performance) etomort@elx306b6vv:~/tomas/tekams$ python parallel.py 
+[(1, 410), (411, 820), (821, 1230), (1231, 1640), (1641, 2050), (2051, 2460), (2461, 2870), (2871, 3280), (3281, 3690), (3691, 4100)]
+#+END_EXAMPLE
+
+  Ahora, buscar en que página se quedó en su día para cada par
+  sqlite> select max(page) from company where page < 410;
+  370
+  sqlite> select max(page) from company where page < 820;
+  586
+  sqlite> select max(page) from company where page < 1230;
+  905
+  sqlite> select * from company where page = 370;
+
+
+[(1, 410), (411, 820), (821, 1230), (1231, 1640), (1641, 2050), (2051, 2460), (2461, 2870), (2871, 3280), (3281, 3690), (3691, 4100)]
+
+[(370, 410), (586, 820), (905, 1230), (1322, 1640), (1747, 2050), (2144, 2460), (2548, 2870), (2996, 3280), (3388, 3690), (4000, 4100)]
+[(409, 410), (637, 820), (953, 1230), (1370, 1640), (1795, 2050), (2191, 2460), (2595, 2870), (3044, 3280), (3437, 3690), (4050, 4100)]
+[(409, 410), (719, 820), (1034, 1230), (1452, 1640), (1879, 2050), (2271, 2460), (2677, 2870), (3127, 3280), (3523, 3690), (4099, 4100)]
+
+
+* Replace captcha table by page table, so can count pages
+  Include a field to know if there was catpcha failure after 5 tries in __anti_captcha
+  Insert 2 rows: one at start, and one when the page is finished, both with same uid and second with execution time
+  Or update the page row...
+
+* Include url in company table...
+  + or may be move it from conns table, since we hace the uid to match all conns that belong to a URL)
+  + But when a FAILED happens, there is no uid relation between tables
+
+* Log DB exception to file. Is it possible/advisable to retry the INSERT?
+#+BEGIN_EXAMPLE Exceptions samples
+EXCEPTION db.conns BEGIN
+uid: 9377c33a396b486d91d411e665737138 | query:  first url: http://guiaempresas.universia.es/CANOVAS-SANCHEZ-MIGUEL.html
+EXCEPTION db.conns END
+
+
+EXCEPTION fill_company_info BEGIN
+ 2070 |  62073 | SUSANA-SAEZ-MESTRE                                           |                                | Murcia          |          
+EXCEPTION fill_company_info END
+
+EXCEPTION fill_company_info BEGIN
+  158 |   4734 | MULTI-SERVICE-BUREAU-LMC                                     |                                | Murcia          |          
+EXCEPTION fill_company_info END
+EXCEPTION fill_company_info BEGIN
+  474 |  14203 | JARO-GILO                                                    |                                | Murcia          |          
+EXCEPTION fill_company_info END
+EXCEPTION fill_company_info BEGIN
+ 2906 |  87169 | INVESBLAN                                                    |                                | Murcia          |          
+EXCEPTION fill_company_info END
+EXCEPTION fill_company_info BEGIN
+EXCEPTION fill_company_info BEGIN
+ 3312 |  99339 | SALVADOR-GIL-VALERA-SLY-MAMCOMUR-UTE                         |                                | Murcia          |          
+  848 |  25433 | CITRICOS-ECOLOGICOS-ALFA-OMEGA                               |                                | Murcia          |          
+EXCEPTION fill_company_info END
+EXCEPTION fill_company_info END
+#+END_EXAMPLE
+#+BEGIN_EXAMPLE select FAILED
+sqlite> select * from company where status = 'FAILED';
+666|2053|61585|Vogel Parafarmacias Sl  (extinguida)|CALLE MINA IMPENSADA, 1 - PLT 1 . LOC 1|MAZARRON|Murcia|none|4775 - Comercio al por menor de productos cosméticos e higiénicos en establecimientos especializados|none|none|FAILED
+666|831|24925|SORIANO-CANALES-IMPORTACIONES|||Murcia|||||FAILED
+666|2063|61882|TRITURADOS-ALQUILERES-MASAN|||Murcia|||||FAILED
+666|3702|111052|ASESORAMIENTOS-GESTION-INMOBILIARIA-GUIVICAR|||Murcia|||||FAILED
+666|2886|86558|Explotaciones Inmobiliarias Lador Sl.|CALLE NUMANCIA, 8 - 2|LA UNION|Murcia|none|4110 - Promoción inmobiliaria|none|none|FAILED
+666|2891|86701|none|none|none|Murcia|none|none|none|none|FAILED
+666|110|3287|MECANIZADOS-JUAN-JOSE-CELDRAN|||Murcia|||||FAILED
+666|2892|86750|Rodriguez Martinez Agustina| LOPEZ DE VEGA, 11 - BJ B|ALHAMA DE MURCIA|Murcia|none|none|none|none|FAILED
+666|158|4734|MULTI-SERVICE-BUREAU-LMC|||Murcia|||||FAILED
+666|474|14203|JARO-GILO|||Murcia|||||FAILED
+666|2906|87169|INVESBLAN|||Murcia|||||FAILED
+666|848|25433|CITRICOS-ECOLOGICOS-ALFA-OMEGA|||Murcia|||||FAILED
+666|3312|99339|SALVADOR-GIL-VALERA-SLY-MAMCOMUR-UTE|||Murcia|||||FAILED
+666|2070|62073|SUSANA-SAEZ-MESTRE|||Murcia|||||FAILED
+#+END_EXAMPLE
+
+* Is STATUS field in company table the same as QUERY field in conns?
+  ANSWER: More or less, though query field in conns also stores the query = 'page' for page queries.
+  conns table stores the different connections opened per each try (first, renew-phone, renew-nameN).
+  company table stores only the final status. company table can have FAILED value, and conns can not.
+
+* What happens with 'none' value?
+  Can have a field in stored rows in DB the value ''?
+  Should we add renew_ip for other record field (not only record.name)?
+
+* How to continue if parallel is stopped?
+  Need to think what to store and queries needed in order to continue in the same place.
+
+* How to process FAILED requests (need URL in company)
+
+* Review sql/*.sql queries. Remove old ones.
