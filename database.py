@@ -73,3 +73,8 @@ class Database:
             print("EXCEPTION db.conns BEGIN")
             print("uid:", uid, "| query:", query, "url:", url)
             print("EXCEPTION db.conns END")
+
+    def selectLastPage(self, max_page):
+        t = (max_page,)
+        self.cursor.execute("select max(page) from company where page < ?", t)
+        return self.cursor.fetchone()
