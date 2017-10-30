@@ -79,12 +79,12 @@ class Getter:
                 self.db.insert('666', record, 'FAILED')
 
     def pages(self, start, end):
-        for page in range(start, end+1):
+        for page in range(start, end + 1):
             url = self.base_url + 'provincia/MURCIA/?qPagina=' + str(page)
             print("\n===== Extracting page", page, "=====  URL:", url, "\n")
             Record.display_header()
             self.__get_companies(url, page)
-        print("\n", '='*30, "FIN", '='*30)
+        print("\n", '=' * 30, "FIN", '=' * 30)
 
 
 def main():
