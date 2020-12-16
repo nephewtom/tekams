@@ -1,0 +1,9 @@
+* Introduction
+  This tool was written to download information from http://guiaempresas.universia.es/ site.
+  It ran in the past extracting the information using Tor.
+
+* Requisites 
+  - Was written and tested on Ubuntu Linux.
+  - Tor needs to be running
+  https://www.marcus-povey.co.uk/2016/03/24/using-tor-as-a-http-proxy/
+
